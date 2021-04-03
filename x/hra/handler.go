@@ -1,10 +1,10 @@
 package hra
 
 import (
+	"github.com/anathatech/project-anatha/x/hra/internal/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/anathatech/project-anatha/x/hra/internal/types"
 )
 
 func NewHandler(k Keeper) sdk.Handler {
@@ -13,6 +13,8 @@ func NewHandler(k Keeper) sdk.Handler {
 		switch msg := msg.(type) {
 		case MsgRegisterName:
 			return handleMsgRegisterName(ctx, msg, k)
+		case MsgRegisterNameV2:
+			return handleMsgRegisterNameV2(ctx, msg, k)
 		case MsgRenewName:
 			return handleMsgRenewName(ctx, msg, k)
 		case MsgSetPrice:
@@ -84,6 +86,15 @@ func handleProposalRemoveBlockchainId(ctx sdk.Context, k Keeper, proposal types.
 
 func handleMsgRegisterName(ctx sdk.Context, msg MsgRegisterName, k Keeper) (*sdk.Result, error) {
 	err := k.HandleRegisterName(ctx, msg.Name, msg.Owner)
+	if err != nil {
+		return nil, err
+	}
+
+	return &sdk.Result{Events: ctx.EventManager().Events()}, nil
+}
+
+func handleMsgRegisterNameV2(ctx sdk.Context, msg MsgRegisterNameV2, k Keeper) (*sdk.Result, error) {
+	err := k.HandleRegisterNameV2(ctx, msg.Name, msg.Owner, msg.Referral)
 	if err != nil {
 		return nil, err
 	}
