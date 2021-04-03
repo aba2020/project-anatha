@@ -6,6 +6,7 @@ import (
 
 func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(MsgRegisterName{}, "hra/Register", nil)
+	cdc.RegisterConcrete(MsgRegisterNameV2{}, "hra/RegisterV2", nil)
 	cdc.RegisterConcrete(MsgRenewName{}, "hra/Renew", nil)
 	cdc.RegisterConcrete(MsgSetPrice{}, "hra/SetPrice", nil)
 	cdc.RegisterConcrete(MsgDeleteName{}, "hra/Delete", nil)
