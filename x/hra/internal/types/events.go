@@ -2,6 +2,7 @@ package types
 
 const (
 	EventTypeRegister    		= "register_name"
+	EventTypeRegisterV2		 	= "register_name_v2"
 	EventTypeRenew 				= "renew_name"
 	EventTypeSetPrice 			= "set_price"
 	EventTypeDelete				= "delete_name"
@@ -23,6 +24,7 @@ const (
 	AttributeKeyIndex				= "index"
 	AttributeKeyTitle				= "title"
 	AttributeKeyDescription			= "description"
+	AttributeKeyReferral			= "referral"
 
 	AttributeValueModule = ModuleName
 )
