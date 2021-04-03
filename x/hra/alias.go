@@ -54,4 +54,5 @@ type (
 	MsgRegisterAddress = types.MsgRegisterAddress
 	MsgRemoveAddress = types.MsgRemoveAddress
 	MsgRemoveAllAddresses = types.MsgRemoveAllAddresses
+	MsgRegisterNameV2 = types.MsgRegisterNameV2
 )
