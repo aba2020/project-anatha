@@ -11,6 +11,7 @@ import (
 
 const (
 	QueryAddressChildren = "address-children"
+	QueryAddressChildrenWithBalance = "address-children-with-balance"
 	QueryAddressParent = "address-parent"
 	QueryAddressBalance = "address-balance"
 	QueryParameters = "parameters"
@@ -22,6 +23,8 @@ func NewQuerier(k Keeper) sdk.Querier {
 		switch path[0] {
 		case QueryAddressChildren:
 			return queryAddressChildren(ctx, path[1:], req, k)
+		case QueryAddressChildrenWithBalance:
+			return queryAddressChildrenWithBalance(ctx, path[1:], req, k)
 		case QueryAddressParent:
 			return queryAddressParent(ctx, path[1:], req, k)
 		case QueryAddressBalance:
@@ -46,6 +49,42 @@ func queryAddressChildren(ctx sdk.Context, path []string, req abci.RequestQuery,
 	children, _ := k.GetAddressChildren(ctx, address)
 
 	res, marshalErr := codec.MarshalJSONIndent(types.ModuleCdc, children)
+
+	if marshalErr != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, marshalErr.Error())
+	}
+
+	return res, nil
+}
+
+func queryAddressChildrenWithBalance(ctx sdk.Context, path []string, req abci.RequestQuery, k Keeper) ([]byte, error) {
+	address, err := sdk.AccAddressFromBech32(path[0])
+
+	if err != nil {
+		return nil, err
+	}
+
+	children, _ := k.GetAddressChildren(ctx, address)
+
+	type ReturnData struct {
+		address sdk.AccAddress `json:"address" yaml:"address"`
+		balance types.Balance `json:"balance" yaml:"balance"`
+	}
+
+	var returnData []ReturnData
+
+	for i := 0; i < len(children); i++ {
+		child := children[i]
+
+		balance, _ := k.GetAddressBalance(ctx, child)
+
+		returnData = append(returnData, ReturnData{
+			child,
+			balance,
+		})
+	}
+
+	res, marshalErr := codec.MarshalJSONIndent(types.ModuleCdc, returnData)
 
 	if marshalErr != nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, marshalErr.Error())
