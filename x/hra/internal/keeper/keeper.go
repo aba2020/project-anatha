@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"github.com/anathatech/project-anatha/x/referral"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/supply"
@@ -21,9 +22,10 @@ type Keeper struct {
 	paramspace types.ParamSubspace
 	feeCollectorName string
 	hooks types.NameHooks
+	ReferralKeeper referral.Keeper
 }
 
-func NewKeeper(coinKeeper bank.Keeper, accountKeeper auth.AccountKeeper, supplyKeeper supply.Keeper, cdc *codec.Codec, key sdk.StoreKey, paramspace types.ParamSubspace, feeCollectorName string) Keeper {
+func NewKeeper(coinKeeper bank.Keeper, accountKeeper auth.AccountKeeper, supplyKeeper supply.Keeper, cdc *codec.Codec, key sdk.StoreKey, paramspace types.ParamSubspace, feeCollectorName string, referralKeeper referral.Keeper) Keeper {
 
 	keeper := Keeper{
 		CoinKeeper:	coinKeeper,
@@ -33,6 +35,7 @@ func NewKeeper(coinKeeper bank.Keeper, accountKeeper auth.AccountKeeper, supplyK
 		cdc:        cdc,
 		paramspace: paramspace.WithKeyTable(types.ParamKeyTable()),
 		feeCollectorName: feeCollectorName,
+		ReferralKeeper: referralKeeper,
 	}
 	return keeper
 }
