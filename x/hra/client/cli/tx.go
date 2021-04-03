@@ -31,6 +31,7 @@ func GetTxCmd(cdc *codec.Codec) *cobra.Command {
 
 	hraTxCmd.AddCommand(flags.PostCommands(
 		GetCmdRegisterName(cdc),
+		GetCmdRegisterNameV2(cdc),
 		GetCmdRenewName(cdc),
 		GetCmdSetPrice(cdc),
 		GetCmdDeleteName(cdc),
@@ -79,6 +80,72 @@ func GetCmdRegisterName(cdc *codec.Codec) *cobra.Command {
 
 			msg := types.NewMsgRegisterName(args[0], cliCtx.GetFromAddress())
 			err := msg.ValidateBasic()
+			if err != nil {
+				return err
+			}
+
+			msgs = append(msgs, msg)
+
+			for _, address := range addresses {
+				registerAddressMsg := types.NewMsgRegisterAddress(
+					cliCtx.GetFromAddress(),
+					address.BlockchainId,
+					address.Index,
+					address.BlockchainAddress,
+				)
+
+				err := registerAddressMsg.ValidateBasic()
+				if err != nil {
+					return err
+				}
+
+				msgs = append(msgs, registerAddressMsg)
+			}
+
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, msgs)
+		},
+	}
+}
+
+func GetCmdRegisterNameV2(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "register-v2 [name] [referral] [addresses-file]",
+		Short: "register a new hra with referral",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			inBuf := bufio.NewReader(cmd.InOrStdin())
+			txBldr := auth.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			var addresses []types.BlockchainAddressInfo
+			var msgs []sdk.Msg
+
+			if len(args) > 2 {
+
+				file, err := os.Open(args[2])
+				if err != nil {
+					return err
+				}
+
+				defer closeFile(file)
+
+				bytes, _ := ioutil.ReadAll(file)
+
+				err = json.Unmarshal(bytes, &addresses)
+				if err != nil {
+					return err
+				}
+
+			}
+
+			address, err := sdk.AccAddressFromBech32(args[1])
+
+			if err != nil {
+				return err
+			}
+
+			msg := types.NewMsgRegisterNameV2(args[0], cliCtx.GetFromAddress(), address)
+			err = msg.ValidateBasic()
 			if err != nil {
 				return err
 			}
