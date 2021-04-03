@@ -5,6 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/anathatech/project-anatha/config"
 	"github.com/anathatech/project-anatha/x/hra/internal/types"
+	"github.com/anathatech/project-anatha/x/referral"
 )
 
 
@@ -35,6 +36,73 @@ func (k Keeper) HandleRegisterName(ctx sdk.Context, name string, owner sdk.AccAd
 			types.EventTypeRegister,
 			sdk.NewAttribute(types.AttributeKeyName, name),
 			sdk.NewAttribute(types.AttributeKeyExpires, ctx.BlockTime().Add(k.NameInfoDuration(ctx)).String()),
+		),
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueModule),
+			sdk.NewAttribute(types.AttributeKeySender, owner.String()),
+		),
+	})
+
+	return nil
+}
+
+func (k Keeper) HandleRegisterNameV2(ctx sdk.Context, name string, owner sdk.AccAddress, referrer sdk.AccAddress) error {
+	if k.IsNameRegistered(ctx, name) {
+		return types.ErrNameRegistered
+	}
+
+	fee := k.NameInfoRegistrationFee(ctx)
+
+	feeAmount := fee.AmountOf(config.DefaultDenom)
+
+	referralAmount := feeAmount.ToDec().Mul(k.ReferralKeeper.ReferralPercentage(ctx)).TruncateInt()
+	referralCoin := sdk.NewCoins(sdk.NewCoin(config.DefaultDenom, referralAmount))
+
+	fee = fee.Sub(referralCoin)
+
+	err := k.SupplyKeeper.SendCoinsFromAccountToModule(
+		ctx,
+		owner,
+		k.feeCollectorName,
+		fee,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = k.SupplyKeeper.SendCoinsFromAccountToModule(
+		ctx,
+		owner,
+		referral.ReferralModuleName,
+		referralCoin,
+	)
+	if err != nil {
+		return err
+	}
+
+	k.ReferralKeeper.SetAddressParent(ctx, owner, referrer)
+	currentChildren, _ := k.ReferralKeeper.GetAddressChildren(ctx, referrer)
+	currentChildren = append(currentChildren, owner)
+	k.ReferralKeeper.SetAddressChildren(ctx, referrer, currentChildren)
+
+	referralBalance, _ := k.ReferralKeeper.GetAddressBalance(ctx, referrer)
+	referralBalance.PendingReward = referralBalance.PendingReward.Add(referralCoin...)
+	k.ReferralKeeper.SetAddressBalance(ctx, referrer, referralBalance)
+
+	if ! k.OwnsAnyName(ctx, owner) {
+		k.SetCredits(ctx, owner, k.AddressCredits(ctx))
+		k.AfterFirstNameCreated(ctx, owner)
+	}
+
+	k.RegisterName(ctx, name, owner)
+
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeRegisterV2,
+			sdk.NewAttribute(types.AttributeKeyName, name),
+			sdk.NewAttribute(types.AttributeKeyExpires, ctx.BlockTime().Add(k.NameInfoDuration(ctx)).String()),
+			sdk.NewAttribute(types.AttributeKeyReferral, referrer.String()),
 		),
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
