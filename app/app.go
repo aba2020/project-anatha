@@ -2,13 +2,15 @@ package app
 
 import (
 	"encoding/json"
-	"github.com/anathatech/project-anatha/x/evidence"
 	appConfig "github.com/anathatech/project-anatha/config"
 	"github.com/anathatech/project-anatha/x/distribution"
+	"github.com/anathatech/project-anatha/x/evidence"
 	"github.com/anathatech/project-anatha/x/fee"
 	feeclient "github.com/anathatech/project-anatha/x/fee/client"
 	"github.com/anathatech/project-anatha/x/hra"
 	hraclient "github.com/anathatech/project-anatha/x/hra/client"
+	"github.com/anathatech/project-anatha/x/referral"
+	referralclient "github.com/anathatech/project-anatha/x/referral/client"
 	"github.com/anathatech/project-anatha/x/treasury"
 	"io"
 	"os"
@@ -19,6 +21,15 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
+	distributionclient "github.com/anathatech/project-anatha/x/distribution/client"
+	"github.com/anathatech/project-anatha/x/genutil"
+	gov "github.com/anathatech/project-anatha/x/governance"
+	"github.com/anathatech/project-anatha/x/mint"
+	"github.com/anathatech/project-anatha/x/slashing"
+	"github.com/anathatech/project-anatha/x/staking"
+	treasuryclient "github.com/anathatech/project-anatha/x/treasury/client"
+	"github.com/anathatech/project-anatha/x/upgrade"
+	upgradeclient "github.com/anathatech/project-anatha/x/upgrade/client"
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -28,20 +39,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	"github.com/anathatech/project-anatha/x/genutil"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/supply"
-	distributionclient "github.com/anathatech/project-anatha/x/distribution/client"
-	treasuryclient "github.com/anathatech/project-anatha/x/treasury/client"
-	gov "github.com/anathatech/project-anatha/x/governance"
-	"github.com/anathatech/project-anatha/x/mint"
-	"github.com/anathatech/project-anatha/x/slashing"
-	"github.com/anathatech/project-anatha/x/staking"
-	"github.com/anathatech/project-anatha/x/upgrade"
-	upgradeclient "github.com/anathatech/project-anatha/x/upgrade/client"
 )
-
 
 var (
 	// default home directories for the application CLI
@@ -72,6 +73,7 @@ var (
 			treasuryclient.TransferFromDistributionProfitsToBuyBackLiquidityProposalHandler,
 			treasuryclient.TransferFromTreasuryToSwapEscrowProposalHandler,
 			treasuryclient.TransferFromSwapEscrowToBuyBackProposalHandler,
+			referralclient.CharityFundDistributionProposalHandler,
 		),
 		params.AppModuleBasic{},
 		crisis.AppModuleBasic{},
@@ -82,6 +84,7 @@ var (
 		treasury.AppModuleBasic{},
 		distribution.AppModuleBasic{},
 		fee.AppModuleBasic{},
+		referral.AppModuleBasic{},
 	)
 	// account permissions
 	maccPerms = map[string][]string{
@@ -104,6 +107,8 @@ var (
 		distribution.SecurityTokenFundModuleName: nil,
 		distribution.SavingsModuleName:           nil,
 		distribution.SavingsDistributionModuleName: nil,
+		referral.ReferralModuleName: nil,
+		referral.CharityFundModuleName: nil,
 	}
 )
 
@@ -156,6 +161,7 @@ type AnathaApp struct {
 	feeKeeper 		fee.Keeper
 
 	hraKeeper 		hra.Keeper
+	referralKeeper  referral.Keeper
 
 	// Module Manager
 	mm *module.Manager
@@ -185,6 +191,7 @@ func NewAnathaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest
 		evidence.StoreKey,
 		upgrade.StoreKey,
 		hra.StoreKey,
+		referral.StoreKey,
 		treasury.StoreKey,
 		distribution.StoreKey,
 		fee.StoreKey,
@@ -214,6 +221,7 @@ func NewAnathaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest
 	app.subspaces[crisis.ModuleName] = app.paramsKeeper.Subspace(crisis.DefaultParamspace)
 	app.subspaces[evidence.ModuleName] = app.paramsKeeper.Subspace(evidence.DefaultParamspace)
 	app.subspaces[hra.ModuleName] = app.paramsKeeper.Subspace(hra.DefaultParamspace)
+	app.subspaces[referral.ModuleName] = app.paramsKeeper.Subspace(referral.DefaultParamspace)
 	app.subspaces[treasury.ModuleName] = app.paramsKeeper.Subspace(treasury.DefaultParamspace)
 	app.subspaces[distribution.ModuleName] = app.paramsKeeper.Subspace(distribution.DefaultParamspace)
 	app.subspaces[fee.ModuleName] = app.paramsKeeper.Subspace(fee.DefaultParamspace)
@@ -242,6 +250,15 @@ func NewAnathaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest
 		maccPerms,
 	)
 
+	app.referralKeeper = referral.NewKeeper(
+		app.bankKeeper,
+		app.accountKeeper,
+		app.supplyKeeper,
+		app.cdc,
+		keys[referral.StoreKey],
+		app.subspaces[referral.ModuleName],
+	)
+
 	hraKeeper := hra.NewKeeper(
 		app.bankKeeper,
 		app.accountKeeper,
@@ -250,6 +267,7 @@ func NewAnathaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest
 		keys[hra.StoreKey],
 		app.subspaces[hra.ModuleName],
 		distribution.AmcModuleName,
+		app.referralKeeper,
 	)
 
 	// The staking keeper
@@ -368,7 +386,8 @@ func NewAnathaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest
 		AddRoute(hra.RouterKey, hra.NewGovernanceProposalHandler(app.hraKeeper)).
 		AddRoute(fee.RouterKey, fee.NewGovernanceProposalHandler(app.feeKeeper)).
 		AddRoute(distribution.RouterKey, distribution.NewDistributionProposalHandler(app.distributionKeeper)).
-		AddRoute(treasury.RouterKey, treasury.NewTreasuryProposalHandler(app.treasuryKeeper))
+		AddRoute(treasury.RouterKey, treasury.NewTreasuryProposalHandler(app.treasuryKeeper)).
+		AddRoute(referral.RouterKey, referral.NewGovernanceProposalHandler(app.referralKeeper))
 
 	govRouter.Seal()
 
@@ -396,6 +415,7 @@ func NewAnathaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest
 		treasury.NewAppModule(app.treasuryKeeper, app.accountKeeper, app.supplyKeeper, app.bankKeeper),
 		distribution.NewAppModule(app.distributionKeeper, app.supplyKeeper),
 		fee.NewAppModule(app.feeKeeper),
+		referral.NewAppModule(app.referralKeeper, app.bankKeeper, app.accountKeeper, app.supplyKeeper),
 	)
 
 	app.mm.SetOrderBeginBlockers(upgrade.ModuleName, mint.ModuleName, distribution.ModuleName, treasury.ModuleName, slashing.ModuleName, staking.ModuleName)
@@ -419,6 +439,7 @@ func NewAnathaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest
 		treasury.ModuleName,
 		fee.ModuleName,
 		genutil.ModuleName,
+		referral.ModuleName,
 	)
 
 	app.mm.RegisterInvariants(&app.crisisKeeper)
