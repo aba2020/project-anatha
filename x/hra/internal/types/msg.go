@@ -43,6 +43,50 @@ func (msg MsgRegisterName) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Owner}
 }
 
+// MsgRegisterNameV2
+type MsgRegisterNameV2 struct {
+	Name  string         `json:"name" yaml:"name"`
+	Owner sdk.AccAddress `json:"owner" yaml:"owner"`
+	Referral sdk.AccAddress `json:"referral" yaml:"referral"`
+}
+
+func NewMsgRegisterNameV2(name string, owner sdk.AccAddress, referral sdk.AccAddress) MsgRegisterNameV2 {
+	return MsgRegisterNameV2{
+		Name:  name,
+		Owner: owner,
+		Referral: referral,
+	}
+}
+
+func (msg MsgRegisterNameV2) Route() string { return RouterKey }
+
+func (msg MsgRegisterNameV2) Type() string { return "register_name_v2" }
+
+func (msg MsgRegisterNameV2) ValidateBasic() error {
+	err := validateName(msg.Name)
+	if err != nil {
+		return err
+	}
+
+	if msg.Owner.Empty() {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Owner.String())
+	}
+
+	if msg.Referral.Empty() {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, msg.Referral.String())
+	}
+
+	return nil
+}
+
+func (msg MsgRegisterNameV2) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
+}
+
+func (msg MsgRegisterNameV2) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.Owner}
+}
+
 // MsgRenewName
 type MsgRenewName struct {
 	Name  string         `json:"name" yaml:"name"`
