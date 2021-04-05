@@ -19,5 +19,5 @@ var (
 	ErrBlockchainAddressNotFound 	= sdkerrors.Register(ModuleName, 111, "Blockchain Address not found.")
 	ErrNoNamesRegistered         	= sdkerrors.Register(ModuleName, 112, "No names registered.")
 	ErrMaximumDurationExceeded 		= sdkerrors.Register(ModuleName, 113, "Maximum Name Info duration exceeded.")
-	ErrNoSelfReferral		 		= sdkerrors.Register(ModuleName, 113, "Self referral is not allowed.")
+	ErrNoSelfReferral		 		= sdkerrors.Register(ModuleName, 114, "Self referral is not allowed.")
 )
