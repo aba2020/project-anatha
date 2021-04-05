@@ -83,8 +83,21 @@ func (k Keeper) HandleRegisterNameV2(ctx sdk.Context, name string, owner sdk.Acc
 
 	k.ReferralKeeper.SetAddressParent(ctx, owner, referrer)
 	currentChildren, _ := k.ReferralKeeper.GetAddressChildren(ctx, referrer)
-	currentChildren = append(currentChildren, owner)
-	k.ReferralKeeper.SetAddressChildren(ctx, referrer, currentChildren)
+
+	found := false
+
+	for _, el := range currentChildren {
+		if el.Equals(owner) {
+			found = true
+
+			break
+		}
+	}
+
+	if ! found {
+		currentChildren = append(currentChildren, owner)
+		k.ReferralKeeper.SetAddressChildren(ctx, referrer, currentChildren)
+	}
 
 	referralBalance, _ := k.ReferralKeeper.GetAddressBalance(ctx, referrer)
 	referralBalance.PendingReward = referralBalance.PendingReward.Add(referralCoin...)
