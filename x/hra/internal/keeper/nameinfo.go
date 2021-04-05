@@ -54,6 +54,10 @@ func (k Keeper) HandleRegisterNameV2(ctx sdk.Context, name string, owner sdk.Acc
 
 	fee := k.NameInfoRegistrationFee(ctx)
 
+	if owner.Equals(referrer) {
+		return types.ErrNoSelfReferral
+	}
+
 	feeAmount := fee.AmountOf(config.DefaultDenom)
 
 	referralAmount := feeAmount.ToDec().Mul(k.ReferralKeeper.ReferralPercentage(ctx)).TruncateInt()
