@@ -66,22 +66,14 @@ func queryAddressChildrenWithBalance(ctx sdk.Context, path []string, req abci.Re
 
 	children, _ := k.GetAddressChildren(ctx, address)
 
-	type ReturnData struct {
-		address sdk.AccAddress `json:"address" yaml:"address"`
-		balance types.Balance `json:"balance" yaml:"balance"`
-	}
-
-	var returnData []ReturnData
+	var returnData []types.ChildBalance
 
 	for i := 0; i < len(children); i++ {
 		child := children[i]
 
 		balance, _ := k.GetAddressBalance(ctx, child)
 
-		returnData = append(returnData, ReturnData{
-			child,
-			balance,
-		})
+		returnData = append(returnData, types.NewChildBalance(child, balance))
 	}
 
 	res, marshalErr := codec.MarshalJSONIndent(types.ModuleCdc, returnData)
