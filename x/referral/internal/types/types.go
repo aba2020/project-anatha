@@ -72,3 +72,20 @@ func (h AddressBalancePair) String() string {
 	return fmt.Sprintf(`Address: %s
 Balance: %s`, h.Address, h.Balance)
 }
+
+type ChildBalance struct {
+	Address sdk.AccAddress `json:"address" yaml:"address"`
+	Balance Balance `json:"balance" yaml:"balance"`
+}
+
+func NewChildBalance(address sdk.AccAddress, balance Balance) ChildBalance {
+	return ChildBalance{
+		Address: address,
+		Balance: balance,
+	}
+}
+
+func (h ChildBalance) String() string {
+	return fmt.Sprintf(`Address: %s
+Balance: %s`, h.Address, h.Balance)
+}
