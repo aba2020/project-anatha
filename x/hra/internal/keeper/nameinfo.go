@@ -85,27 +85,39 @@ func (k Keeper) HandleRegisterNameV2(ctx sdk.Context, name string, owner sdk.Acc
 		return err
 	}
 
-	k.ReferralKeeper.SetAddressParent(ctx, owner, referrer)
-	currentChildren, _ := k.ReferralKeeper.GetAddressChildren(ctx, referrer)
+	existingParent, _ := k.ReferralKeeper.GetAddressParent(ctx, owner)
+	ownerChildren, _ := k.ReferralKeeper.GetAddressChildren(ctx, owner)
 
-	found := false
+	eventReferral := referrer
+	if existingParent.Equals(k.SupplyKeeper.GetModuleAddress(referral.CharityFundModuleName)) && len(ownerChildren) == 0 {
+		k.ReferralKeeper.SetAddressParent(ctx, owner, referrer)
+		currentChildren, _ := k.ReferralKeeper.GetAddressChildren(ctx, referrer)
 
-	for _, el := range currentChildren {
-		if el.Equals(owner) {
-			found = true
+		found := false
 
-			break
+		for _, el := range currentChildren {
+			if el.Equals(owner) {
+				found = true
+
+				break
+			}
 		}
-	}
 
-	if ! found {
-		currentChildren = append(currentChildren, owner)
-		k.ReferralKeeper.SetAddressChildren(ctx, referrer, currentChildren)
-	}
+		if !found {
+			currentChildren = append(currentChildren, owner)
+			k.ReferralKeeper.SetAddressChildren(ctx, referrer, currentChildren)
+		}
 
-	referralBalance, _ := k.ReferralKeeper.GetAddressBalance(ctx, referrer)
-	referralBalance.PendingReward = referralBalance.PendingReward.Add(referralCoin...)
-	k.ReferralKeeper.SetAddressBalance(ctx, referrer, referralBalance)
+		referralBalance, _ := k.ReferralKeeper.GetAddressBalance(ctx, referrer)
+		referralBalance.PendingReward = referralBalance.PendingReward.Add(referralCoin...)
+		k.ReferralKeeper.SetAddressBalance(ctx, referrer, referralBalance)
+	} else {
+		referralBalance, _ := k.ReferralKeeper.GetAddressBalance(ctx, existingParent)
+		referralBalance.PendingReward = referralBalance.PendingReward.Add(referralCoin...)
+		k.ReferralKeeper.SetAddressBalance(ctx, existingParent, referralBalance)
+
+		eventReferral = existingParent
+	}
 
 	if ! k.OwnsAnyName(ctx, owner) {
 		k.SetCredits(ctx, owner, k.AddressCredits(ctx))
@@ -119,7 +131,7 @@ func (k Keeper) HandleRegisterNameV2(ctx sdk.Context, name string, owner sdk.Acc
 			types.EventTypeRegisterV2,
 			sdk.NewAttribute(types.AttributeKeyName, name),
 			sdk.NewAttribute(types.AttributeKeyExpires, ctx.BlockTime().Add(k.NameInfoDuration(ctx)).String()),
-			sdk.NewAttribute(types.AttributeKeyReferral, referrer.String()),
+			sdk.NewAttribute(types.AttributeKeyReferral, eventReferral.String()),
 		),
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
