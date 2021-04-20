@@ -89,7 +89,7 @@ func (k Keeper) HandleRegisterNameV2(ctx sdk.Context, name string, owner sdk.Acc
 	ownerChildren, _ := k.ReferralKeeper.GetAddressChildren(ctx, owner)
 
 	eventReferral := referrer
-	if existingParent.Equals(k.SupplyKeeper.GetModuleAddress(referral.CharityFundModuleName)) && len(ownerChildren) == 0 {
+	if ! k.OwnsAnyName(ctx, owner) && len(ownerChildren) == 0 {
 		k.ReferralKeeper.SetAddressParent(ctx, owner, referrer)
 		currentChildren, _ := k.ReferralKeeper.GetAddressChildren(ctx, referrer)
 
