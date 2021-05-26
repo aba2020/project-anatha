@@ -72,7 +72,7 @@ func (k Keeper) GetAddressParentIterator(ctx sdk.Context) sdk.Iterator {
 }
 
 func (k Keeper) IterateAddressParents(ctx sdk.Context, cb func(address sdk.AccAddress, parent sdk.AccAddress) (stop bool)) {
-	iterator := k.GetAddressBalanceIterator(ctx)
+	iterator := k.GetAddressParentIterator(ctx)
 	defer iterator.Close()
 
 	for ; iterator.Valid(); iterator.Next() {
@@ -113,7 +113,7 @@ func (k Keeper) GetAddressChildrenIterator(ctx sdk.Context) sdk.Iterator {
 }
 
 func (k Keeper) IterateAddressChildren(ctx sdk.Context, cb func(address sdk.AccAddress, children []sdk.AccAddress) (stop bool)) {
-	iterator := k.GetAddressBalanceIterator(ctx)
+	iterator := k.GetAddressChildrenIterator(ctx)
 	defer iterator.Close()
 
 	for ; iterator.Valid(); iterator.Next() {
