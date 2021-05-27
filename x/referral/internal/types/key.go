@@ -23,7 +23,9 @@ const (
 var (
 	BalancePrefix         = []byte{0x10}
 	AddressParentPrefix   = []byte{0x11}
-	AddressChildrenPrefix = []byte{0x12}
+	AddressChildPrefix = []byte{0x12}
+
+	StatusPresent = []byte{0x1}
 )
 
 func GetBalanceKey(address sdk.AccAddress) []byte {
@@ -34,6 +36,9 @@ func GetAddressParentKey(address sdk.AccAddress) []byte {
 	return append(AddressParentPrefix, address...)
 }
 
-func GetAddressChildrenKey(address sdk.AccAddress) []byte {
-	return append(AddressChildrenPrefix, address...)
+func GetAddressChildKey(address sdk.AccAddress, child sdk.AccAddress) []byte {
+	key := append(AddressChildPrefix, address...)
+	key = append(key, child...)
+
+	return key
 }
