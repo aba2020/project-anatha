@@ -39,21 +39,21 @@ func (h AddressParentPair) String() string {
 Parent: %s`, h.Address, h.Parent)
 }
 
-type AddressChildrenPair struct {
+type AddressChildPair struct {
 	Address sdk.AccAddress
-	Children []sdk.AccAddress
+	Child sdk.AccAddress
 }
 
-func NewAddressChildrenPair(address sdk.AccAddress, children []sdk.AccAddress) AddressChildrenPair {
-	return AddressChildrenPair{
+func NewAddressChildrenPair(address sdk.AccAddress, child sdk.AccAddress) AddressChildPair {
+	return AddressChildPair{
 		Address: address,
-		Children: children,
+		Child: child,
 	}
 }
 
-func (h AddressChildrenPair) String() string {
+func (h AddressChildPair) String() string {
 	return fmt.Sprintf(`Address: %s
-Children: %s`, h.Address, h.Children)
+Child: %s`, h.Address, h.Child)
 }
 
 type AddressBalancePair struct {

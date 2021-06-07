@@ -13,8 +13,8 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 		keeper.SetAddressBalance(ctx, record.Address, record.Balance)
 	}
 
-	for _, record := range data.AddressChildrenPairs {
-		keeper.SetAddressChildren(ctx, record.Address, record.Children)
+	for _, record := range data.AddressChildPairs {
+		keeper.SetAddressChild(ctx, record.Address, record.Child)
 	}
 
 	for _, record := range data.AddressParentPairs {
@@ -41,9 +41,9 @@ func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 		return false
 	})
 
-	var addressChildrenPairs []types.AddressChildrenPair
-	k.IterateAddressChildren(ctx, func (address sdk.AccAddress, children []sdk.AccAddress) (stop bool) {
-		addressChildrenPairs = append(addressChildrenPairs, types.NewAddressChildrenPair(address, children))
+	var addressChildPairs []types.AddressChildPair
+	k.IterateAddressChild(ctx, func (address sdk.AccAddress, child sdk.AccAddress) (stop bool) {
+		addressChildPairs = append(addressChildPairs, types.NewAddressChildrenPair(address, child))
 
 		return false
 	})
@@ -52,6 +52,6 @@ func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 		Params:      params,
 		AddressBalancePairs: addressBalancePairs,
 		AddressParentPairs: addressParentPairs,
-		AddressChildrenPairs: addressChildrenPairs,
+		AddressChildPairs: addressChildPairs,
 	}
 }

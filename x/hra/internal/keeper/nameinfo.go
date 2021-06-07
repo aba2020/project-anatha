@@ -91,21 +91,10 @@ func (k Keeper) HandleRegisterNameV2(ctx sdk.Context, name string, owner sdk.Acc
 	eventReferral := referrer
 	if ! k.OwnsAnyName(ctx, owner) && len(ownerChildren) == 0 {
 		k.ReferralKeeper.SetAddressParent(ctx, owner, referrer)
-		currentChildren, _ := k.ReferralKeeper.GetAddressChildren(ctx, referrer)
+		alreadyReferred := k.ReferralKeeper.HasAddressChild(ctx, referrer, owner)
 
-		found := false
-
-		for _, el := range currentChildren {
-			if el.Equals(owner) {
-				found = true
-
-				break
-			}
-		}
-
-		if !found {
-			currentChildren = append(currentChildren, owner)
-			k.ReferralKeeper.SetAddressChildren(ctx, referrer, currentChildren)
+		if ! alreadyReferred {
+			k.ReferralKeeper.SetAddressChild(ctx, referrer, owner)
 		}
 
 		referralBalance, _ := k.ReferralKeeper.GetAddressBalance(ctx, referrer)
